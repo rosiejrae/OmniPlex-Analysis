@@ -1,0 +1,65 @@
+% Specify the path to the folder containing Excel files
+folderPath = 'D:\PlexonData\230310\Analyzed';
+
+% Get a list of all Excel files in the folder
+files = dir(fullfile(folderPath, '*.xls'));
+
+format longG %giving the actual values
+
+% Loop through each file in the folder
+for fileIndex = 1:length(files)
+    % Specify the filename for the current file
+    filename = fullfile(folderPath, files(fileIndex).name);
+    % Read the data from the Excel file
+    [num, txt, raw] = xlsread (filename);
+
+    % Extract variables from the data
+    Channel = num(:, 1); % extract the first column of numerical data
+    Unit = num(:, 2); % extract the second column of numerical data
+    Timestamp = num(:,3);
+    Peak = num(:, 4);
+    Valley = num(:, 5);
+    Energy = num(:,6);
+    PeakValley = num(:,7);
+
+    % Find the unique values of the unit column
+    uniqueUnits = unique(Unit);
+
+    % Add a prefix to each unit number indicating which file it came from
+    modifiedUnits = cell(length(uniqueUnits), 1);
+    for i = 1:length(uniqueUnits)
+        modifiedUnits{i} = strcat('file', num2str(fileIndex), '_unit', num2str(uniqueUnits(i)));
+    end
+
+    % Loop through the unique units and extract the corresponding data
+    for i = 1:length(uniqueUnits)
+        % Find the rows corresponding to the current unit
+        unitRows = Unit == uniqueUnits(i);
+
+        % Extract the data for the current unit
+        unitChannel = Channel(unitRows);
+        unitTimestamp = Timestamp(unitRows);
+        unitPeak = Peak(unitRows);
+        unitValley = Valley(unitRows);
+        unitEnergy = Energy(unitRows);
+        unitPeakValley = PeakValley(unitRows);
+
+        % Calculate the ISI for the current unit
+        isi = diff(unitTimestamp);
+        avg_isi = mean(isi);
+
+        % Calculate the average values for relevant variables
+        avgPeak = mean(unitPeak);
+        avgValley = mean(unitValley);
+        avgEnergy = mean(unitEnergy);
+        avgPeakValley = mean(unitPeakValley); 
+
+        % Print out the average values for each unit
+        fprintf('Unit %s:\n', modifiedUnits{i});
+        fprintf('Average ISI: %f\n', avg_isi);
+        fprintf('Average Peak: %f\n', avgPeak);
+        fprintf('Average Valley: %f\n', avgValley);
+        fprintf('Average Energy: %f\n', avgEnergy);
+        fprintf('Average Peak Valley: %f\n', avgPeakValley)
+    end
+end
