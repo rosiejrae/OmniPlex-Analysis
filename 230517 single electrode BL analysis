@@ -1,0 +1,58 @@
+%MATLAB script to analyze single file from single electrode recording under anesthesia
+
+% Specify the path to the folder containing Excel files
+filename = 'C:\Users\ror236\OneDrive - Medical University of South Carolina\General\Rosie\Single Unit Recordings\LC Female Fischer data\0.997,-3.658,6.211.xls';
+format longG %giving the actual values
+% Read the data from the Excel file
+[num, txt, raw] = xlsread(filename);
+
+% Extract variables from the data
+Channel = num(:, 1); % extract the first column of numerical data
+Unit = num(:, 2); % extract the second column of numerical data
+Timestamp = num(:, 3);
+Peak = num(:, 4);
+
+% Find the unique values of the unit column
+uniqueUnits = unique(Unit);
+
+% Plot the line graph of peak over time
+figure;
+for i = 1:length(uniqueUnits)
+    % Find the rows corresponding to the current unit
+    unitRows = Unit == uniqueUnits(i);
+    
+    % Extract the data for the current unit
+    unitTimestamp = Timestamp(unitRows);
+    unitPeak = Peak(unitRows);
+    
+    % Plot the peak values over time
+    plot(unitTimestamp, unitPeak, 'LineWidth', 1.5);
+    hold on;
+end
+hold off;
+xlabel('Time (s)');
+ylabel('Peak (uV)');
+title('Peak values over time');
+legend('Unit 1', 'Unit 2', 'Unit 3', 'Unit 4', 'Unit 5'); % Add legend for each un
+
+
+% Plot the raster plot of timestamps over time
+figure;
+for i = 1:length(uniqueUnits)
+    % Find the rows corresponding to the current unit
+    unitRows = Unit == uniqueUnits(i);
+    
+    % Extract the data for the current unit
+    unitTimestamp = Timestamp(unitRows);
+    
+    % Create a vector of ones with the same length as unitTimestamp
+    onesVector = ones(size(unitTimestamp));
+    
+    % Plot the timestamps as a scatter plot
+    scatter(unitTimestamp, uniqueUnits(i) * onesVector, 10, 'k', 'filled');
+    hold on;
+end
+hold off;
+xlabel('Time (s)');
+ylabel('Unit');
+title('Raster plot of timestamps over time');
