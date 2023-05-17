@@ -1,0 +1,120 @@
+% Specify the path to the folder containing Excel files
+folderPath = 'D:\PlexonData\230324\Analyzed';
+
+% Get a list of all Excel files in the folder
+files = dir(fullfile(folderPath, '*.xls'));
+
+format longG %giving the actual values
+
+% Loop through each file in the folder
+for fileIndex = 1:length(files)
+    % Specify the filename for the current file
+    filename = fullfile(folderPath, files(fileIndex).name);
+    % Read the data from the Excel file
+    [num, txt, raw] = xlsread (filename);
+  
+   
+
+    % Extract variables from the data
+    Channel = num(:, 1); % extract the first column of numerical data
+    Unit = num(:, 2); % extract the second column of numerical data
+    Timestamp = num(:,3);
+    Peak = num(:, 4);
+    Valley = num(:, 5);
+    Energy = num(:,6);
+    PeakValley = num(:,7);
+
+    % Find the unique values of the unit column
+    uniqueUnits = unique(Unit);
+
+    % Add a prefix to each unit number indicating which file it came from
+    modifiedUnits = cell(length(uniqueUnits), 1);
+    for i = 1:length(uniqueUnits)
+        modifiedUnits{i} = strcat('file', num2str(fileIndex), '_unit', num2str(uniqueUnits(i)));
+    end
+
+    % Loop through the unique units and extract the corresponding data
+    for i = 1:length(uniqueUnits)
+        % Find the rows corresponding to the current unit
+        unitRows = Unit == uniqueUnits(i);
+
+        % Extract the data for the current unit
+        unitChannel = Channel(unitRows);
+        unitTimestamp = Timestamp(unitRows);
+        unitPeak = Peak(unitRows);
+        unitValley = Valley(unitRows);
+        unitEnergy = Energy(unitRows);
+        unitPeakValley = PeakValley(unitRows);
+
+        % Calculate the ISI for the current unit
+        isi = diff(unitTimestamp);
+        avg_isi = mean(isi);
+
+         % Calculate the firing rate
+        firing_rate = 1 / mean(isi);
+
+       %BURSTSSSS
+        % Find bursts (two spikes with ISI less than 0.08s, terminated with ISI greater than 0.16s)
+        isi = diff(unitTimestamp);
+        isi_1 = isi(1:end-1); % ISIs between first spike in each pair and the subsequent spike
+        isi_2 = isi(2:end); % ISIs between second spike in each pair and the preceding spike
+        burst_starts = find(isi_1 < 0.08 & isi_2 > 0.16) + 1;
+        burst_ends = find(isi_2 > 0.16 & isi_1 < 0.08);
+
+       % Calculate the average duration of bursts
+    if numBursts > 0
+        burstDurations = isi(burstIndices) + isi(burstIndices+1);
+        avgBurstDuration = mean(burstDurations);
+    else
+        avgBurstDuration = NaN;
+    end 
+        % Calculate the ISIs within the bursts
+        burst_isis = {};
+        for j = 1:length(burst_starts)
+            burst_isis{j} = isi(burst_starts(j):burst_ends(j));
+        end
+
+       
+
+        % Print out the average values for each burst
+        fprintf('Unit %s:\n', modifiedUnits{i});
+        fprintf('Firing Rate: %f\n', firing_rate);
+        for j = 1:length(burst_isis)
+            fprintf('Burst %d:\n', j);
+            fprintf('ISIs within burst: %s\n', mat2str(burst_isis{j}));
+        end
+ 
+        % Calculate the firing rate
+        firing_rate = 1 / mean(isi);
+
+        % Calculate the average values for relevant variables
+        avgPeak = mean(unitPeak);
+        avgValley = mean(unitValley);
+        avgEnergy = mean(unitEnergy);
+        avgPeakValley = mean(unitPeakValley); 
+    end
+        % Print out the average values for each unit
+        fprintf('Unit %s:\n', modifiedUnits{i});
+        fprintf('Average ISI: %f\n', avg_isi);
+        fprintf('Average Firing Rate: %f\n', firing_rate);
+        fprintf('Average Peak: %f\n', avgPeak);
+        fprintf('Average Valley: %f\n', avgValley);
+        fprintf('Average Energy: %f\n', avgEnergy);
+        fprintf('Average Peak Valley: %f\n', avgPeakValley)
+
+         % Print out the average values for each burst
+        fprintf('Average Burst Duration: %f\n', avgBurstDuration)
+        
+
+        
+end
+
+% Create a bar graph of the firing rates
+figure;
+bar(firing_rates);
+xticklabels(modified_unit_names);
+xlabel('Unit');
+ylabel('Firing Rate (Hz)');
+title('Average Firing Rates per Unit and File');
+
+
