@@ -1,0 +1,69 @@
+function [P] = psth_raster(spiketim,spikeid,stimtim,stimid,binsize,unit,winstart,winend,numstim,baseline,prepost,offset)
+
+for i = 1:numstim
+histraw{i} = []; 
+raster{i} = []; 
+end
+
+[P] = 1;
+
+spiketim_cut=spiketim(find(spikeid==unit))-offset;
+
+for i = 1:numstim
+    stimtim_cut{i} = stimtim(find(stimid == i));
+    trial = 1;
+    for k = 1:length(stimtim_cut{i})
+        stimcount(k) = length(find(spiketim_cut >= (stimtim_cut{i}(k)+winstart) & spiketim_cut <= (stimtim_cut{i}(k)+winend)))./(winend-winstart);
+        blcount(k) = length(find(spiketim_cut >= (stimtim_cut{i}(k)-baseline) & spiketim_cut <= (stimtim_cut{i}(k))))./(baseline);
+        histrawtemp = spiketim_cut(find(spiketim_cut >= (stimtim_cut{i}(k)-prepost) & spiketim_cut <= (stimtim_cut{i}(k)+prepost)))-stimtim_cut{i}(k);
+        histraw{i} = cat(1,histraw{i},histrawtemp);
+        raster{i}{trial} = histrawtemp;
+        trial = trial +1;
+        clear histrawtemp
+    end
+    rs{i} = stimcount - blcount;
+    clear blcount stimcount
+end
+
+
+histscale = [-prepost:binsize:prepost];
+for i = 1:numstim
+histresult{i}=hist(histraw{i},histscale)./(length(stimtim_cut{i})*binsize);
+histmax(i)=max(histresult{i});
+end
+
+Yrange = 1.1 * max(histmax);
+
+%plot spike histograms 
+for i = 1:numstim
+    figure('NumberTitle','off','Position',[650 500 400 200]);title(sprintf('stimulus %i psth',i));
+    hold on
+    bar(histscale,histresult{i});set(gca,'YLim',[0 Yrange]);set(gca,'XLim',[-prepost prepost]);ylabel('spikes/s');
+    plot([winstart winstart],[0 Yrange],'r-');plot([winend winend],[0 Yrange],'r-');hold off;
+end
+
+%plot spike rasters 
+for i = 1:numstim
+    figure('NumberTitle','off','Position',[400 200 400 150]);title(sprintf('stimulus %i raster',i));
+    hold on; 
+    for p = 1:numel(raster{i})
+        scatter(raster{i}{p},zeros(1,length(raster{i}{p}))+p,15,'filled','k');
+    end
+    set(gca,'XLim',[-prepost prepost]);set(gca,'YLim',[0 p+1]);ylabel('spikes/s');
+    plot([winstart winstart],[0 p],'r-');plot([winend winend],[0 p],'r-');hold off;
+end
+
+%plot suprathreshold tuning curve
+for i = 1:numstim
+    tc_data(i) = mean(rs{i});
+    tc_stderr(i) = std(rs{i})./(sqrt(length(stimtim_cut{i})));
+end
+figure('Name','tuning curve','NumberTitle','off','Position',[200 500 400 200]);
+plot(tc_data,'k');hold on;
+for i = 1:numstim
+    plot([i i],[(tc_data(i)+tc_stderr(i)) (tc_data(i)-tc_stderr(i))],'k');
+end
+set(gca,'XLim',[0 numstim+1]);
+plot([0 numstim+1],[0 0],'Color',[0.5 0.5 0.5],'LineStyle','--');
+hold off
+xlabel('stimulus');ylabel('baseline subtracted firing rate(spikes/s)');
